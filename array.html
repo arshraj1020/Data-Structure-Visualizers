@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1D Array Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .fira-code {
+            font-family: 'Fira Code', monospace;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+    <div class="container mx-auto p-4">
+        <header class="text-center my-6">
+            <a href="index.html" class="text-indigo-600 hover:text-indigo-800 mb-4 inline-block">&larr; Back to Hub</a>
+            <h1 class="text-4xl font-bold text-slate-900">1D Array Visualizer</h1>
+        </header>
+
+        <!-- Redesigned Controls Bar -->
+        <div class="bg-white p-3 rounded-lg shadow-md border border-slate-200 mb-6">
+            <div class="flex flex-wrap items-center gap-x-6 gap-y-4">
+                <!-- Creation -->
+                <div class="flex items-center gap-2">
+                    <label class="font-semibold text-sm">Size:</label>
+                    <input type="number" id="create-size" class="w-20 px-2 py-1 border rounded-md" placeholder="max 15" value="8">
+                    <button id="create-btn" class="bg-indigo-600 text-white px-4 py-1 rounded-md font-semibold">Create</button>
+                </div>
+                <div class="h-6 border-l border-slate-300"></div>
+                <!-- Insertion/Deletion -->
+                <div class="flex items-center gap-2">
+                    <input type="number" id="value-input" class="w-20 px-2 py-1 border rounded-md" placeholder="Value">
+                    <input type="number" id="index-input" class="w-20 px-2 py-1 border rounded-md" placeholder="Index">
+                    <button id="insert-btn" class="bg-blue-600 text-white px-4 py-1 rounded-md font-semibold">Insert</button>
+                    <button id="delete-btn" class="bg-red-600 text-white px-4 py-1 rounded-md font-semibold">Delete</button>
+                </div>
+                <div class="h-6 border-l border-slate-300"></div>
+                <!-- Sorting -->
+                <div class="flex items-center gap-2">
+                    <select id="sort-select" class="px-2 py-1 border rounded-md font-semibold">
+                        <option value="bubbleSort">Bubble Sort</option>
+                        <option value="selectionSort">Selection Sort</option>
+                        <option value="insertionSort">Insertion Sort</option>
+                    </select>
+                    <button id="sort-btn" class="bg-purple-600 text-white px-4 py-1 rounded-md font-semibold">Sort</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualization & Info -->
+        <div class="bg-white rounded-lg shadow-md border border-slate-200">
+            <div class="p-4 min-h-[300px]">
+                 <canvas id="visualizerCanvas"></canvas>
+            </div>
+            <div class="border-t grid grid-cols-1 md:grid-cols-3">
+                <div class="p-4 border-r">
+                    <h3 class="font-semibold text-slate-500 text-sm mb-1">STATUS</h3>
+                    <p id="status-display" class="fira-code text-lg">Ready. Create an array to begin.</p>
+                </div>
+                <div class="p-4 border-r">
+                    <h3 class="font-semibold text-slate-500 text-sm mb-1">TIME COMPLEXITY</h3>
+                    <p id="complexity-display" class="fira-code text-lg text-green-600">O(?)</p>
+                </div>
+                <div class="p-4">
+                     <h3 class="font-semibold text-slate-500 text-sm mb-1">ANIMATION</h3>
+                    <div class="flex items-center gap-2 mt-1">
+                        <button id="play-pause-btn" class="bg-slate-700 text-white px-4 py-1 rounded-md font-semibold">Play</button>
+                        <button id="step-btn" class="bg-slate-700 text-white px-4 py-1 rounded-md font-semibold">Step ➡️</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="messageBox" class="message-box"></div>
+    <script src="array.js"></script>
+</body>
+</html>
