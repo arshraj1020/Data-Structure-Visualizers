@@ -1,14 +1,13 @@
 // --- DOM & SETUP ---
 const canvas = document.getElementById('visualizerCanvas');
 const ctx = canvas.getContext('2d');
-const complexityDisplay = document.getElementById('complexity-display');
 const statusDisplay = document.getElementById('status-display');
-const playPauseBtn = document.getElementById('play-pause-btn');
-const stepBtn = document.getElementById('step-btn');
+const complexityDisplay = document.getElementById('complexity-display');
+const infoDisplay = document.getElementById('info-display');
+const messageBox = document.getElementById('messageBox');
 
-// --- UTILITY ---
+// --- UTILITY FUNCTIONS ---
 function showMessage(message, type = 'info', duration = 3000) {
-    const messageBox = document.getElementById('messageBox');
     messageBox.textContent = message;
     messageBox.className = `message-box bg-${type} show`;
     setTimeout(() => { messageBox.classList.remove('show'); }, duration);
@@ -16,14 +15,18 @@ function showMessage(message, type = 'info', duration = 3000) {
 
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-// --- INFO & STATUS ---
+// --- OPERATION INFO ---
 const INFO = {
-    'create': { complexity: 'O(n)', status: 'Creating array...' },
-    'insert': { complexity: 'O(n)', status: 'Inserting element...' },
-    'delete': { complexity: 'O(n)', status: 'Deleting element...' },
-    'bubbleSort': { complexity: 'O(n²)', status: 'Bubble Sort' },
-    'selectionSort': { complexity: 'O(n²)', status: 'Selection Sort' },
-    'insertionSort': { complexity: 'O(n²)', status: 'Insertion Sort' },
+    'add': { complexity: 'O(1) amortized', status: 'Adding element...' },
+    'add-at': { complexity: 'O(n)', status: 'Adding at index...' },
+    'remove': { complexity: 'O(n)', status: 'Removing at index...' },
+    'get': { complexity: 'O(1)', status: 'Getting element...' },
+    'set': { complexity: 'O(1)', status: 'Setting element...' },
+    'resize': { complexity: 'O(n)', status: 'Resizing capacity...' },
+    'clear': { complexity: 'O(1)', status: 'Clearing list...' },
+    // --- MODIFIED: Updated complexity for efficient sort ---
+    'sort': { complexity: 'O(n log n)', status: 'Sorting...' },
+    'reverse': { complexity: 'O(n)', status: 'Reversing list...' },
 };
 
 function updateInfo(operation, statusText = null) {
@@ -37,207 +40,313 @@ function updateInfo(operation, statusText = null) {
 }
 
 // --- VISUALIZER CLASS ---
-class ArrayVisualizer {
-    constructor() {
-        this.array = [];
-        this.animationQueue = [];
-        this.currentStep = 0;
-        this.isPlaying = false;
+class ArrayListVisualizer {
+    constructor(initialCapacity = 4) {
+        this.elements = new Array(initialCapacity).fill(null);
+        this.size = 0;
+        this.capacity = initialCapacity;
+        this.maxCapacity = 16;
+        this.isAnimating = false;
+        
+        this.setupCanvas();
         this.setupEventListeners();
-        this.resizeCanvas();
-        window.addEventListener('resize', () => this.resizeCanvas());
+        window.addEventListener('resize', () => this.setupCanvas());
+    }
+    
+    setupCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        this.draw();
     }
 
-    resizeCanvas() {
-        const container = canvas.parentElement;
-        canvas.width = container.clientWidth;
-        canvas.height = 250;
-        this.draw();
+    updateDisplayInfo() {
+        infoDisplay.textContent = `Size: ${this.size}, Capacity: ${this.capacity}`;
     }
 
     draw(highlights = {}) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (this.array.length === 0) return;
+        const rect = canvas.parentElement.getBoundingClientRect();
+        ctx.clearRect(0, 0, rect.width, rect.height);
+        this.updateDisplayInfo();
 
-        const n = this.array.length;
-        const maxVal = Math.max(...this.array, 1);
-        const barWidth = canvas.width / (n * 1.5 + 0.5);
-        const spacing = barWidth * 0.5;
+        const n = this.capacity;
+        const cellSize = Math.min(60, (rect.width - 60) / n);
+        const spacing = 8;
+        const totalWidth = (n * cellSize) + ((n - 1) * spacing);
+        const startX = (rect.width - totalWidth) / 2;
+        const y = rect.height / 2 - cellSize;
 
-        this.array.forEach((value, i) => {
-            const barHeight = (value / maxVal) * (canvas.height * 0.8);
-            const x = (spacing / 2) + i * (barWidth + spacing);
-            const y = canvas.height - barHeight - 20;
+        for (let i = 0; i < n; i++) {
+            const x = startX + i * (cellSize + spacing);
 
-            ctx.fillStyle = highlights[i] || '#64748b'; // slate-500
-            ctx.fillRect(x, y, barWidth, barHeight);
+            ctx.beginPath();
+            ctx.roundRect(x, y, cellSize, cellSize, 8);
 
-            ctx.fillStyle = '#1e293b';
-            ctx.font = 'bold 14px Inter';
-            ctx.textAlign = 'center';
-            ctx.fillText(value, x + barWidth / 2, y - 10);
-            
-            ctx.fillStyle = '#475569';
-            ctx.font = '12px Inter';
-            ctx.fillText(i, x + barWidth / 2, canvas.height - 5);
-        });
-    }
-
-    create(size) {
-        if (size <= 0 || size > 15) {
-            showMessage('Please enter a size between 1 and 15.', 'error');
-            return;
-        }
-        updateInfo('create');
-        this.array = Array.from({length: size}, () => Math.floor(Math.random() * 90) + 10);
-        this.draw();
-        showMessage(`Array of size ${size} created.`, 'success');
-        updateInfo(null);
-    }
-
-    async insert(value, index) {
-        if (this.isPlaying || index < 0 || index > this.array.length || this.array.length >= 15) {
-             if (this.array.length >= 15) showMessage('Array is full (max 15).', 'error');
-            return;
-        }
-        updateInfo('insert', `Inserting ${value} at index ${index}`);
-        this.array.splice(index, 0, value);
-        this.draw({[index]: '#22c55e'});
-        await sleep(800);
-        this.draw();
-        updateInfo(null);
-    }
-
-    async delete(index) {
-        if (this.isPlaying || index < 0 || index >= this.array.length) return;
-        updateInfo('delete', `Deleting element at index ${index}`);
-        this.draw({[index]: '#ef4444'});
-        await sleep(800);
-        this.array.splice(index, 1);
-        this.draw();
-        updateInfo(null);
-    }
-
-    prepareSort(sortType) {
-        this.animationQueue = [];
-        this.currentStep = 0;
-        const tempArray = [...this.array];
-        updateInfo(sortType);
-        
-        switch(sortType) {
-            case 'bubbleSort': this.generateBubbleSortSteps(tempArray); break;
-            case 'selectionSort': this.generateSelectionSortSteps(tempArray); break;
-            case 'insertionSort': this.generateInsertionSortSteps(tempArray); break;
-        }
-        
-        showMessage(`Ready to visualize. Press Play or Step.`, 'info');
-    }
-
-    generateBubbleSortSteps(arr) {
-        const n = arr.length;
-        for (let i = 0; i < n - 1; i++) {
-            for (let j = 0; j < n - i - 1; j++) {
-                this.animationQueue.push({ type: 'compare', indices: [j, j + 1], text: `Comparing ${arr[j]} and ${arr[j+1]}` });
-                if (arr[j] > arr[j + 1]) {
-                    this.animationQueue.push({ type: 'swap', indices: [j, j + 1], text: `Swapping ${arr[j]} and ${arr[j+1]}` });
-                    [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
-                }
+            if (i >= this.size) {
+                ctx.strokeStyle = '#d1d5db';
+                ctx.setLineDash([4, 4]);
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.setLineDash([]);
+            } else {
+                ctx.fillStyle = highlights[i] || '#10b981';
+                ctx.strokeStyle = '#059669';
+                ctx.lineWidth = 2;
+                ctx.fill();
+                ctx.stroke();
             }
+
+            if (this.elements[i] !== null) {
+                ctx.fillStyle = 'white';
+                ctx.font = `bold ${cellSize * 0.4}px Inter`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.elements[i], x + cellSize / 2, y + cellSize / 2);
+            }
+
+            ctx.fillStyle = '#4b5563';
+            ctx.font = `${cellSize * 0.25}px Fira Code`;
+            ctx.textAlign = 'center';
+            ctx.fillText(i, x + cellSize / 2, y + cellSize + 15);
         }
+    }
+
+    async resize() {
+        this.isAnimating = true;
+        updateInfo('resize');
+        await sleep(500);
+        
+        let newCapacity = this.capacity * 2;
+        if (newCapacity > this.maxCapacity) {
+            newCapacity = this.maxCapacity;
+        }
+
+        const newElements = new Array(newCapacity).fill(null);
+        
+        for (let i = 0; i < this.size; i++) {
+            statusDisplay.textContent = `Copying element ${this.elements[i]}...`;
+            newElements[i] = this.elements[i];
+            this.draw({[i]:'#f59e0b'});
+            await sleep(250);
+        }
+        
+        this.elements = newElements;
+        this.capacity = newCapacity;
+
+        statusDisplay.textContent = `Resize complete. New capacity is ${this.capacity}.`;
+        this.draw();
+        await sleep(800);
+        updateInfo(null);
+        this.isAnimating = false;
+    }
+
+    async add(value) {
+        if (this.isAnimating || !value) return;
+        
+        if (this.size === this.maxCapacity) {
+            showMessage(`Sorry, we can only store ${this.maxCapacity} elements for now.`, "error");
+            return;
+        }
+        
+        if (this.size === this.capacity) {
+            await this.resize();
+        }
+
+        this.isAnimating = true;
+        updateInfo('add');
+        
+        const index = this.size;
+        this.elements[index] = value;
+        this.size++;
+        
+        this.draw({[index]: '#34d399'});
+        await sleep(600);
+        
+        this.draw();
+        updateInfo(null);
+        this.isAnimating = false;
     }
     
-    generateSelectionSortSteps(arr) {
-        const n = arr.length;
-        for (let i = 0; i < n - 1; i++) {
-            let minIdx = i;
-            for (let j = i + 1; j < n; j++) {
-                this.animationQueue.push({ type: 'compare', indices: [j, minIdx], text: `Comparing ${arr[j]} and ${arr[minIdx]}` });
-                if (arr[j] < arr[minIdx]) {
-                    minIdx = j;
-                }
-            }
-            if (minIdx !== i) {
-                this.animationQueue.push({ type: 'swap', indices: [i, minIdx], text: `Swapping ${arr[i]} and ${arr[minIdx]}` });
-                [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]];
-            }
-        }
-    }
-
-    async stepForward() {
-        if (this.currentStep >= this.animationQueue.length) {
-            this.isPlaying = false;
-            playPauseBtn.textContent = 'Play';
-            this.draw();
-            updateInfo(null, 'Sort complete!');
+    async addAtIndex(index, value) {
+        if (this.isAnimating || !value || index < 0 || index > this.size) {
+            if (!this.isAnimating) showMessage("Index out of bounds.", "error");
             return;
         }
 
-        const step = this.animationQueue[this.currentStep];
-        statusDisplay.textContent = step.text;
+        if (this.size === this.maxCapacity) {
+            showMessage(`Sorry, we can only store ${this.maxCapacity} elements for now.`, "error");
+            return;
+        }
+
+        if (this.size === this.capacity) {
+            await this.resize();
+        }
+        this.isAnimating = true;
+        updateInfo('add-at');
         
-        if (step.type === 'compare') {
-            this.draw({ [step.indices[0]]: '#fde047', [step.indices[1]]: '#fde047' }); // yellow-300
-        } else if (step.type === 'swap') {
-            const [i, j] = step.indices;
-            this.draw({ [i]: '#f87171', [j]: '#f87171' }); // red-400
-            await sleep(250);
-            [this.array[i], this.array[j]] = [this.array[j], this.array[i]];
-            this.draw({ [i]: '#4ade80', [j]: '#4ade80' }); // green-400
+        for (let i = this.size; i > index; i--) {
+            this.elements[i] = this.elements[i-1];
+            this.draw({[i-1]: '#fbbf24', [i]: '#fde68a'});
+            await sleep(200);
         }
-
-        this.currentStep++;
+        
+        this.elements[index] = value;
+        this.size++;
+        
+        this.draw({[index]: '#34d399'});
+        await sleep(600);
+        
+        this.draw();
+        updateInfo(null);
+        this.isAnimating = false;
+    }
+    
+    async remove(index) {
+        if (this.isAnimating || index < 0 || index >= this.size) {
+            if (!this.isAnimating) showMessage("Index out of bounds.", "error");
+            return;
+        }
+        this.isAnimating = true;
+        updateInfo('remove');
+        
+        this.draw({[index]: '#f87171'});
+        await sleep(400);
+        this.elements[index] = null;
+        
+        for(let i = index; i < this.size - 1; i++) {
+            this.elements[i] = this.elements[i+1];
+            this.draw({[i]: '#fbbf24', [i+1]: '#fde68a'});
+            await sleep(200);
+        }
+        this.elements[this.size-1] = null;
+        this.size--;
+        
+        this.draw();
+        updateInfo(null);
+        this.isAnimating = false;
+    }
+    
+    async get(index) {
+        if (this.isAnimating || index < 0 || index >= this.size) {
+            if (!this.isAnimating) showMessage("Index out of bounds.", "error");
+            return;
+        }
+        this.isAnimating = true;
+        updateInfo('get');
+        this.draw({[index]: '#60a5fa'});
+        showMessage(`Value at index ${index} is ${this.elements[index]}`, 'info');
+        await sleep(1000);
+        this.draw();
+        updateInfo(null);
+        this.isAnimating = false;
+    }
+    
+    async set(index, value) {
+         if (this.isAnimating || !value || index < 0 || index >= this.size) {
+            if (!this.isAnimating) showMessage("Index out of bounds.", "error");
+            return;
+        }
+        this.isAnimating = true;
+        updateInfo('set');
+        this.elements[index] = value;
+        this.draw({[index]: '#34d399'});
+        showMessage(`Set value at index ${index} to ${value}`, 'success');
+        await sleep(1000);
+        this.draw();
+        updateInfo(null);
+        this.isAnimating = false;
     }
 
-    async play() {
-        this.isPlaying = true;
-        playPauseBtn.textContent = 'Pause';
-        while (this.isPlaying && this.currentStep < this.animationQueue.length) {
-            await this.stepForward();
+    clear() {
+        if (this.isAnimating) return;
+        updateInfo('clear');
+        this.elements = new Array(this.capacity).fill(null);
+        this.size = 0;
+        this.draw();
+        showMessage("ArrayList cleared.", "success");
+        updateInfo(null);
+    }
+
+    // --- MODIFIED: Uses the fast, built-in sort ---
+    async sort() {
+        if (this.isAnimating || this.size <= 1) return;
+        this.isAnimating = true;
+        updateInfo('sort');
+
+        // Create a temporary slice of the array that contains the actual elements
+        const toSort = this.elements.slice(0, this.size);
+
+        // Use the built-in sort. It requires a comparison function for numbers.
+        toSort.sort((a, b) => parseInt(a) - parseInt(b));
+
+        // Copy the sorted elements back
+        for (let i = 0; i < this.size; i++) {
+            this.elements[i] = toSort[i];
+        }
+
+        // Show a final "sorted" state animation
+        const highlights = {};
+        for(let i=0; i < this.size; i++) highlights[i] = '#34d399';
+        this.draw(highlights);
+        await sleep(800);
+
+        this.draw();
+        showMessage("Sorting complete.", "success");
+        updateInfo(null);
+        this.isAnimating = false;
+    }
+
+    async reverse() {
+        if (this.isAnimating || this.size <= 1) return;
+        this.isAnimating = true;
+        updateInfo('reverse');
+
+        let left = 0;
+        let right = this.size - 1;
+
+        while (left < right) {
+            this.draw({ [left]: '#8b5cf6', [right]: '#8b5cf6' });
             await sleep(400);
-        }
-        if (this.isPlaying) {
-             this.isPlaying = false;
-             playPauseBtn.textContent = 'Play';
-             this.draw();
-             updateInfo(null, 'Sort complete!');
-        }
-    }
 
-    pause() {
-        this.isPlaying = false;
-        playPauseBtn.textContent = 'Play';
+            [this.elements[left], this.elements[right]] = [this.elements[right], this.elements[left]];
+
+            this.draw({ [left]: '#34d399', [right]: '#34d399' });
+            await sleep(400);
+
+            left++;
+            right--;
+        }
+
+        this.draw();
+        showMessage("Reversing complete.", "success");
+        updateInfo(null);
+        this.isAnimating = false;
     }
 
     setupEventListeners() {
-        document.getElementById('create-btn').addEventListener('click', () => {
-            this.create(parseInt(document.getElementById('create-size').value));
-        });
+        const valueInput = document.getElementById('value-input');
+        const indexInput = document.getElementById('index-input');
+
+        document.getElementById('add-btn').addEventListener('click', () => this.add(valueInput.value));
+        document.getElementById('clear-btn').addEventListener('click', () => this.clear());
+        document.getElementById('sort-btn').addEventListener('click', () => this.sort());
+        document.getElementById('reverse-btn').addEventListener('click', () => this.reverse());
         
-        document.getElementById('insert-btn').addEventListener('click', () => {
-            const value = parseInt(document.getElementById('value-input').value);
-            const index = parseInt(document.getElementById('index-input').value);
-            if (!isNaN(value) && !isNaN(index)) this.insert(value, index);
-        });
+        const handleIndexOp = (func) => {
+            if (isNaN(parseInt(indexInput.value))) {
+                showMessage("Please enter a valid index.", "error");
+                return;
+            }
+            func(parseInt(indexInput.value), valueInput.value);
+        };
 
-        document.getElementById('delete-btn').addEventListener('click', () => {
-            const index = parseInt(document.getElementById('index-input').value);
-            if (!isNaN(index)) this.delete(index);
-        });
-
-        document.getElementById('sort-btn').addEventListener('click', () => {
-            const sortType = document.getElementById('sort-select').value;
-            this.prepareSort(sortType);
-        });
-
-        playPauseBtn.addEventListener('click', () => {
-            if (this.isPlaying) this.pause();
-            else this.play();
-        });
-
-        stepBtn.addEventListener('click', () => {
-            if (!this.isPlaying) this.stepForward();
-        });
+        document.getElementById('add-at-btn').addEventListener('click', () => handleIndexOp(this.addAtIndex.bind(this)));
+        document.getElementById('remove-btn').addEventListener('click', () => handleIndexOp(this.remove.bind(this)));
+        document.getElementById('get-btn').addEventListener('click', () => handleIndexOp(this.get.bind(this)));
+        document.getElementById('set-btn').addEventListener('click', () => handleIndexOp(this.set.bind(this)));
     }
 }
 
-new ArrayVisualizer();
+new ArrayListVisualizer();

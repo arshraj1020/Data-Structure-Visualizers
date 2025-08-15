@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArrayList Visualizer</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@4" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <style>
         body { font-family: 'Inter', sans-serif; }
         .fira-code { font-family: 'Fira Code', monospace; }
+        .canvas-container { min-height: 180px; }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800">
@@ -36,13 +37,15 @@
                 </div>
                  <div class="h-6 border-l border-slate-300"></div>
                  <div class="flex items-center gap-2">
+                     <button id="sort-btn" class="bg-emerald-600 text-white px-4 py-1 rounded-md font-semibold">Sort</button>
+                     <button id="reverse-btn" class="bg-violet-600 text-white px-4 py-1 rounded-md font-semibold">Reverse</button>
                      <button id="clear-btn" class="bg-slate-700 text-white px-4 py-1 rounded-md font-semibold">Clear</button>
                 </div>
             </div>
         </div>
 
         <div class="bg-white rounded-lg shadow-md border border-slate-200">
-            <div class="p-4 min-h-[350px]">
+            <div class="p-4 canvas-container">
                  <canvas id="visualizerCanvas"></canvas>
             </div>
             <div class="border-t grid grid-cols-1 md:grid-cols-3">

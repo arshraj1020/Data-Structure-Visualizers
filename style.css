@@ -1,28 +1,69 @@
 body {
     font-family: 'Inter', sans-serif;
+    background-color: #f1f5f9; /* slate-100 */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
+.content-wrapper {
+    flex-grow: 1;
+}
+
+/* Card styles for index.html */
+.card {
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border: 1px solid #e2e8f0; /* slate-200 */
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+.card:hover:not(.disabled) {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+}
+.card-title {
+    color: #1e293b; /* slate-800 */
+    font-weight: 700;
+    font-size: 1.5rem;
+    line-height: 2rem;
+}
+.card-description {
+    color: #475569; /* slate-600 */
+    margin-top: 0.5rem;
+}
+.card-icon {
+    width: 4rem;
+    height: 4rem;
+    margin-bottom: 1rem;
+    color: #4f46e5; /* indigo-600 */
+}
+
+/* Canvas Styles */
 canvas {
-    background-color: #f8fafc;
-    border-radius: 0.5rem;
-    border: 1px solid #e2e8f0;
-    display: block; /* Important for resizing */
+    display: block;
     width: 100%;
     height: 100%;
 }
 
+/* Message Box Styles */
 .message-box {
     position: fixed;
     bottom: 20px;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-50%) translateY(120%);
     padding: 1rem 1.5rem;
     border-radius: 0.5rem;
     color: white;
     font-weight: 500;
     z-index: 1000;
     opacity: 0;
-    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+    transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .message-box.show {
@@ -33,3 +74,8 @@ canvas {
 .bg-success { background-color: #22c55e; }
 .bg-error { background-color: #ef4444; }
 .bg-info { background-color: #3b82f6; }
+
+/* Footer */
+footer {
+    margin-top: auto;
+}
